@@ -1,28 +1,120 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <Sidebar></Sidebar>
+    <canvas id="myCanvas"></canvas>
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
-
+import Sidebar from "./components/Sidebar";
 export default {
   name: 'app',
   components: {
-    HelloWorld
+    Sidebar
+  },
+  data() {
+    return {
+      canvas: undefined,
+      context: undefined,
+      drawing: false,//绘画是否开始
+      myTimeStamp: undefined, //时间戳
+      minTimeDiff: 8,
+      minPointDistance: 8,
+      lineWidth: 10,
+      strokeStyle: 'rgba(0,0,0,0.8)',
+      color: 'rgba(0,0,0,0.8)',
+      stack: [],//用stack是因为鼠标松开时，path会清空，必须用一个相同的stack保存
+      path: []
+    }
+  },
+  mounted() {
+    this.canvas = document.getElementById('myCanvas')
+    this.context = this.canvas.getContext('2d')
+    this.initCanvas()
+    this.initContext()
+    window.onresize = () => {
+      this.initCanvas()
+      this.initContext()//这里必须加，不然起始不是圆形
+    }
+    this.canvas.addEventListener('mousedown', this.handleMousedown)
+  },
+  methods: {
+    initCanvas() {
+      this.canvas.width = document.documentElement.clientWidth
+      this.canvas.height = document.documentElement.clientHeight
+    },
+    initContext() {
+      this.context.lineCap = 'round'//以圆形开始和结尾
+      this.context.lineJoin = 'round'//圆形相连
+    },
+    handleMousedown(e) {
+      this.drawing = true
+      this.myTimeStamp = new Date().getTime()
+      let x = e.clientX, y = e.clientY
+      this.path.push({ 'width': this.lineWidth, 'style': this.strokeStyle })
+      this.path.push({ x, y })
+      this.stack.push(this.path)
+      this.drawLine()//这里进行样式初始化
+      this.canvas.addEventListener('mousemove', this.handleMousemove)
+      this.canvas.addEventListener('mouseup', this.handleMouseup)
+    },
+    handleMousemove(e) {
+      //函数节流，画的太快没必要都存
+      if ((new Date().getTime() - this.myTimeStamp) < this.minTimeDiff) {
+        return
+      }
+      //画的距离太短也没必要保存
+      let x = e.clientX, y = e.clientY
+      let x0 = this.path[this.path.length - 1].x, y0 = this.path[this.path.length - 1].y
+      if (Math.abs(x - x0) < this.minPointDistance && Math.abs(y - y0) < this.minPointDistance) {
+        return
+      }
+      //开始保存
+      this.path.push({ x, y })
+      this.myTimeStamp = new Date().getTime()//生成初始时间戳
+      this.drawLine()
+    },
+    handleMouseup() {
+      this.drawing = false
+      this.path = []//坐标数组清空
+      this.canvas.removeEventListener('mousemove', this.handleMousemove)
+      this.canvas.removeEventListener('mouseup', this.handleMouseup)
+    },
+    drawLine() {
+      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)//
+      this.stack.forEach((path) => {
+        //这里stack存储了每一次绘画的path，并在下一次绘画时重新渲染，所以前面的笔画不会消失
+        let length = path.length
+        path.forEach((value, index, arr) => {
+          if (index === 0) {
+            //初始化线条样式
+            this.context.lineWidth = value.width
+            this.context.strokeStyle = value.style
+          } else if (index === 1) {
+            //第一个点,鼠标按下的那个点
+            this.context.beginPath()
+            this.context.moveTo(value.x, value.y)
+            this.context.lineTo(value.x, value.y)//绘制起点
+          } else {
+            //使用贝塞尔曲线
+            let x1 = arr[index - 1].x, y1 = arr[index - 1].y, x2 = value.x, y2 = value.y
+            let x3 = x1 / 2 + x2 / 2, y3 = y1 / 2 + y2 / 2
+            this.context.quadraticCurveTo(x1, y1, x3, y3)
+            //这里的算法是平滑的关键，取前一个点为控制点，前一个与当前点的中点为目标点绘制
+          }
+          if (index === length - 1) {
+            //这个path在动的时候，每一笔都是最后一笔，一旦鼠标离开，path完成，length的值才确定下来
+            this.context.lineTo(value.x, value.y)
+            this.context.stroke()//绘制已经规划好的路线
+          }
+        })
+      })
+    }
   }
 }
 </script>
 
 <style>
 #app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
 }
 </style>
