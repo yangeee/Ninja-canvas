@@ -35,9 +35,10 @@ export default {
     this.siderBarListen()
     window.onresize = () => {
       this.initCanvas()
-      this.initContext()//保证起始不是圆形
+      this.initContext()//保证起始是圆形
     }
     this.canvas.addEventListener('mousedown', this.handleMousedown)
+    this.canvas.addEventListener('touchstart', this.handleTouchstart)
   },
   methods: {
     initCanvas() {
@@ -111,29 +112,62 @@ export default {
         })
       })
     },
-    siderBarListen(){
-      this.$bus.$on('setLineWidth', (e)=>{
+    handleTouchstart(e) {
+      e.preventDefault()
+      this.drawing = true
+      this.myTimeStamp = new Date().getTime()
+      let x = e.touches[0].clientX, y = e.touches[0].clientY
+      this.path.push({ 'width': this.lineWidth, 'style': this.strokeStyle })
+      this.path.push({ x, y })
+      this.stack.push(this.path)
+      this.drawLine()//这里进行样式初始化
+      this.canvas.addEventListener('touchmove', this.handleTouchmove)
+      this.canvas.addEventListener('touchend', this.handleTouchend)
+    },
+    handleTouchmove(e) {
+      e.preventDefault()
+      if ((new Date().getTime() - this.myTimeStamp) < this.minTimeDiff) {
+        return
+      }
+      let x = e.touches[0].clientX, y = e.touches[0].clientY
+      let x0 = this.path[this.path.length - 1].x, y0 = this.path[this.path.length - 1].y
+      if (Math.abs(x - x0) < this.minPointDistance && Math.abs(y - y0) < this.minPointDistance) {
+        return
+      }
+      this.path.push({ x, y })
+      this.myTimeStamp = new Date().getTime()
+      this.drawLine()
+    },
+    handleTouchend(e) {
+      e.preventDefault()
+      this.drawing = false
+      this.path = []//坐标数组清空
+      this.canvas.removeEventListener('touchmove', this.handleTouchmove)
+      this.canvas.removeEventListener('touchend', this.handleTouchend)
+    },
+    siderBarListen() {
+      this.$bus.$on('setLineWidth', (e) => {
         this.lineWidth = e
       })
-      this.$bus.$on('setColor', (e)=>{
+      this.$bus.$on('setColor', (e) => {
         this.strokeStyle = e
       })
-      this.$bus.$on('setClean', ()=>{
+      this.$bus.$on('setClean', () => {
         this.back()
       })
-      this.$bus.$on('setDelete',()=>{
+      this.$bus.$on('setDelete', () => {
         this.delete()
       })
     },
-    back(){
+    back() {
       this.stack.pop()
       this.drawLine()
     },
-    delete(){
+    delete() {
       this.stack = []
       this.drawLine()
     }
-    
+
   }
 }
 </script>

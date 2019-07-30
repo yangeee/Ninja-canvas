@@ -173,11 +173,15 @@ i {
   font-size: 1.8em;
 }
 .siderbar {
-  position: absolute;
-  width: 50px;
+  position: fixed;
+ 
+  z-index: 20;
   color: rgba(0, 0, 0, 0.7);
 }
 .wrapper {
+  position: absolute;
+  left:0;
+  top:0;
   font-size: 2.5em;
   margin-left: 10px;
   .open {
@@ -190,10 +194,12 @@ i {
   }
 }
 .menu {
+  position: absolute;
+  top:60px;
+  left:0;
   background: white;
   box-shadow: 0 0 10px 2px #aaa;
-  width: 160px;
-  padding: 6px 12px;
+  padding: 6px 14px;
   transform: translateX(-110%);
   transition: transform .3s linear;
   &.open {
@@ -224,8 +230,5 @@ i {
   fill: #666;
   transition: fill 0.2s linear;
 }
-.icon.open {
-  fill: #d4237a;
-  transition: fill 0.2s linear;
-}
+
 </style>
