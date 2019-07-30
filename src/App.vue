@@ -1,5 +1,5 @@
 <template>
-  <div id="app">
+  <div>
     <Sidebar></Sidebar>
     <canvas id="myCanvas"></canvas>
   </div>
@@ -18,12 +18,12 @@ export default {
       context: undefined,
       drawing: false,//绘画是否开始
       myTimeStamp: undefined, //时间戳
-      minTimeDiff: 8,
-      minPointDistance: 8,
-      lineWidth: 10,
-      strokeStyle: 'rgba(0,0,0,0.8)',
-      color: 'rgba(0,0,0,0.8)',
-      stack: [],//用stack是因为鼠标松开时，path会清空，必须用一个相同的stack保存
+      minTimeDiff: 8,//2个点之间绘制最小距离
+      minPointDistance: 8,//最小点间距
+      lineWidth: 6,//线宽
+      strokeStyle: 'rgba(0,0,0,0.9)',//填充色
+      color: 'rgba(0,0,0,0.9)',
+      stack: [],//鼠标松开时，path会清空，必须用一个相同的stack保存
       path: []
     }
   },
@@ -32,9 +32,10 @@ export default {
     this.context = this.canvas.getContext('2d')
     this.initCanvas()
     this.initContext()
+    this.siderBarListen()
     window.onresize = () => {
       this.initCanvas()
-      this.initContext()//这里必须加，不然起始不是圆形
+      this.initContext()//保证起始不是圆形
     }
     this.canvas.addEventListener('mousedown', this.handleMousedown)
   },
@@ -81,7 +82,7 @@ export default {
       this.canvas.removeEventListener('mouseup', this.handleMouseup)
     },
     drawLine() {
-      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)//
+      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)//清屏
       this.stack.forEach((path) => {
         //这里stack存储了每一次绘画的path，并在下一次绘画时重新渲染，所以前面的笔画不会消失
         let length = path.length
@@ -109,12 +110,36 @@ export default {
           }
         })
       })
+    },
+    siderBarListen(){
+      this.$bus.$on('setLineWidth', (e)=>{
+        this.lineWidth = e
+      })
+      this.$bus.$on('setColor', (e)=>{
+        this.strokeStyle = e
+      })
+      this.$bus.$on('setClean', ()=>{
+        this.back()
+      })
+      this.$bus.$on('setDelete',()=>{
+        this.delete()
+      })
+    },
+    back(){
+      this.stack.pop()
+      this.drawLine()
+    },
+    delete(){
+      this.stack = []
+      this.drawLine()
     }
+    
   }
 }
 </script>
 
 <style>
-#app {
+#myCanvas {
+  cursor: crosshair;
 }
 </style>
